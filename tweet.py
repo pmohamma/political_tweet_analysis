@@ -62,8 +62,25 @@ class Tweet:
 	def __init__(self, raw_text):
 		self._raw_text = raw_text
 
+
+	def __eq__(self, other):
+		return self.raw_text == other.raw_text
+
+
+	def __ne__(self, other):
+		return not self.__eq__(other)
+
+
+	def __str__(self):
+		return self.raw_text
+
+	def __hash__(self):
+		return self.raw_text.__hash__()
+
+
 	def get_raw_text(self):
 		return self._raw_text
+
 
 	def set_clean_text(self):
 		raw = self._raw_text
@@ -96,20 +113,26 @@ class Tweet:
 				
 		self._clean_text = ' '.join(filtered_tweet)
 	
+
 	def get_clean_text(self):
 		return self._clean_text
+
 
 	def set_sentiment(self):
 		blob = TextBlob(self._clean_text)
 		self._sentiment = blob.sentiment     
 		self._polarity = blob.sentiment.polarity
 		self._subjectivity = blob.sentiment.subjectivity
+
 		
 	def get_sentiment(self):
 		return self._sentiment
 
+
 	def get_polarity(self):
 		return self._polarity # range from -1 (negative) to 1 (positive)
 
+
 	def get_subjectivity(self):
 		return self._subjectivity # range from 0 (objective) to 1 (subjective)
+		
