@@ -41,7 +41,7 @@ class Poll:
 		results = [] #list of tuples that have (candidate's percentage, candidate's name)
 		for person in poll:
 			if person != "Poll" and person != "Date" and person != "Spread":
-				if poll[person] != '--':
+				if person != "Bloomberg" and person != "Steyer" and poll[person] != '--':
 					results.append((float(poll[person]), person))
 		results.sort(key = lambda x:x[0])
 		return results
