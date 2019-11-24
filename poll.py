@@ -1,5 +1,5 @@
 import datetime
-from candidate import Candidate
+from candidate import *
 
 class Poll:
 

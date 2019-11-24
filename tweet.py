@@ -3,6 +3,7 @@ from nltk.corpus import stopwords
 import re
 from textblob import TextBlob
 import string
+import datetime
 
 class Tweet:
 
@@ -59,8 +60,15 @@ class Tweet:
 				# connection is trying to show a connection to a voter or other figure
 
 
-	def __init__(self, raw_text):
-		self._raw_text = raw_text
+	def __init__(self, raw_text, date, tweeter):
+		self.raw_text = raw_text
+		self.media = False
+		self.outside_link = False
+		self.response = False
+		self.set_clean_text()
+		self.set_sentiment()
+		self.date = date
+		self.tweeter = tweeter
 
 
 	def __eq__(self, other):
@@ -78,14 +86,14 @@ class Tweet:
 		return self.raw_text.__hash__()
 
 
-	def get_raw_text(self):
-		return self._raw_text
+	def getraw_text(self):
+		return self.raw_text
 
 
 	def set_clean_text(self):
-		raw = self._raw_text
+		raw = self.raw_text
 		stop_words = set(stopwords.words('english'))
-		raw = re.sub(self.url_regex, '$URL$', raw)
+		raw = re.sub(self.url_regex, '', raw)
 		
 		#after tweepy preprocessing the colon symbol left remain after removing mentions
 				
@@ -136,3 +144,11 @@ class Tweet:
 	def get_subjectivity(self):
 		return self._subjectivity # range from 0 (objective) to 1 (subjective)
 		
+	def contains_media(self):
+		self.media = True
+
+	def contains_link(self):
+		self.outside_link = True
+
+	def is_response(self):
+		self.response = True
