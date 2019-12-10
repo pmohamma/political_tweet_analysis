@@ -4,6 +4,11 @@ import re
 from textblob import TextBlob
 import string
 import datetime
+import gensim
+import gensim.corpora as corpora
+from gensim.utils import simple_preprocess
+from gensim.models import CoherenceModel
+import spacy
 
 class Tweet:
 
@@ -59,6 +64,17 @@ class Tweet:
 				"healthcare", "guns", "abortion", "civil rights", "connection", "economy", "other"] 
 				# connection is trying to show a connection to a voter or other figure
 
+	other_dems = ['bennet', 'biden', 'bloomberg', 'booker', 'buttigieg', 'castro', 
+					'delaney', 'gabbard', 'klobuchar', 'patrick', 'sanders', 'steyer', 
+					'warren', 'williamson', 'yang', 'bullock', 'de blasio', 'gillibrand', 
+					'harris', 'hickenlooper', 'inslee', 'messam', 'moulton', 'ojeda', 'o’rourke', 
+					'ryan', 'sestak', 'swalwell', 'beto', 'kamala', 'julian', 'tulsi', 'bernie', 'kirsten', 'mayor pete',
+					'@andrewyang', '@johndelaney', '@ewarren', '@betoorourke', '@petebuttigieg', '@berniesanders', 
+					'@governorbullock', '@michaelbennet', '@amyklobuchar', '@kamalaharris', '@tulsigabbard', 
+					'@marwilliamson', '@juliancastro', '@corybooker', '@joebiden', '@jayinslee', '@hickenlooper', 
+					'@ericswallwell', '@billdeblasio', '@sengillibrand', '@sethmoulton', '@timryan']
+	other_gops = ['trump', 'mitch', 'mcconnell', '@realdonaldtrump', '@senatemajldr']
+
 
 	def __init__(self, raw_text, date, tweeter):
 		self.raw_text = raw_text
@@ -66,10 +82,12 @@ class Tweet:
 		self.outside_link = False
 		self.response = False
 		self.set_clean_text()
-		self.set_sentiment()
 		self.date = date
 		self.tweeter = tweeter
-
+		if not self._clean_text.count(" ") < 15: 
+			self.set_lemmatized_data()
+			self.set_sentiment()
+			self.set_other_mentions()
 
 	def __eq__(self, other):
 		return self.raw_text == other.raw_text
@@ -86,7 +104,7 @@ class Tweet:
 		return self.raw_text.__hash__()
 
 
-	def getraw_text(self):
+	def get_raw_text(self):
 		return self.raw_text
 
 
@@ -108,6 +126,8 @@ class Tweet:
 				
 		raw = self.emoji_pattern.sub(r'', raw)
 		#filter using NLTK library append it to a string
+
+		raw = re.sub("\'", "", raw)
 			
 		word_tokens = nltk.word_tokenize(raw)	
 		filtered_tweet = [w for w in word_tokens if not w in stop_words]
@@ -126,6 +146,36 @@ class Tweet:
 		return self._clean_text
 
 
+	def tweet_to_words(self, tweet):
+		yield(gensim.utils.simple_preprocess(str(tweet), deacc=True))
+
+	def make_bigrams(self, texts, bigram_mod):
+	    return [bigram_mod[doc] for doc in texts]
+
+	def make_trigrams(self, texts, trigram_mod, bigram_mod):
+	    return [trigram_mod[bigram_mod[doc]] for doc in texts]
+
+	def lemmatization(self, texts, allowed_postags=['NOUN', 'ADJ', 'VERB', 'ADV']):
+	    """https://spacy.io/api/annotation"""
+	    texts_out = []
+	    nlp = spacy.lang.en.English()
+	    for sent in texts:
+	        doc = nlp(" ".join(sent)) 
+	        texts_out.append([token.lemma_ for token in doc ])
+	    return texts_out
+
+	def set_lemmatized_data(self):
+		data_words = list(self.tweet_to_words(self._clean_text))
+		bigram = gensim.models.Phrases(data_words, min_count=5, threshold=2)
+		trigram = gensim.models.Phrases(bigram[data_words], threshold=2)
+		bigram_mod = gensim.models.phrases.Phraser(bigram)
+		trigram_mod = gensim.models.phrases.Phraser(trigram)
+
+		data_words_bigrams = self.make_bigrams(data_words, bigram_mod)
+		nlp = spacy.load('en', disable=['parser', 'ner'])
+		self.data_lemmatized = self.lemmatization(data_words_bigrams, allowed_postags=['NOUN', 'ADJ', 'VERB', 'ADV'])
+
+
 	def set_sentiment(self):
 		blob = TextBlob(self._clean_text)
 		self._sentiment = blob.sentiment     
@@ -135,6 +185,30 @@ class Tweet:
 		
 	def get_sentiment(self):
 		return self._sentiment
+
+
+	def set_other_mentions(self):
+		"""
+		set self.other_mentions to: 
+				0 for no other mentions
+				1 for other dem candidate mention
+				2 for trump or mcconnell mention
+				3 for both dem candidate mention and trump or mcconnell mention
+		"""
+		ret = 0
+		tweeter = self.tweeter
+		raw_text = self.raw_text.lower()
+		for i in self.other_dems:
+			if i in raw_text:
+				ret += 1
+		for i in self.other_gops:
+			if i in raw_text:
+				ret += 2
+		self.other_mentions = ret
+
+
+	def get_other_mentions(self):
+		return self.other_mentions
 
 
 	def get_polarity(self):
