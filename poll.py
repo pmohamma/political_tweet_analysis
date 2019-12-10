@@ -32,6 +32,9 @@ class Poll:
 	def __hash__(self):
 		return self.name.__hash__()
 
+	def __gt__(self, poll2):
+		return self.end_date > poll2.end_date
+
 
 	def get_sorted_results(self):
 		return self.sorted_results

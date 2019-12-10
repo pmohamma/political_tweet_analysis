@@ -201,9 +201,11 @@ class Tweet:
 		for i in self.other_dems:
 			if i in raw_text:
 				ret += 1
+				break
 		for i in self.other_gops:
 			if i in raw_text:
 				ret += 2
+				break
 		self.other_mentions = ret
 
 
